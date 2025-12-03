@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人全栈架构图解 (深度原理解析版)</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --text-color: #cdd6f4;
+            --box-bg: #313244;
+            --highlight: #89b4fa;
+            --ros-color: #f38ba8;
+            --linux-color: #f9e2af;
+            --cpp-color: #89dceb;
+            
+            /* 硬件颜色 */
+            --hw-vision: #cba6f7; 
+            --hw-imu: #fab387;    
+            --hw-mcu: #a6e3a1;
+            --hw-motor: #eba0ac;
+
+            /* 通信协议颜色 */
+            --comm-net: #74c7ec;   /* TCP/UDP 蓝 */
+            --comm-can: #f9e2af;   /* CAN 黄 */
+            --comm-cat: #f38ba8;   /* EtherCAT 红粉 */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 左侧：交互图区域 */
+        .diagram-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+            position: relative;
+            border-right: 2px solid #45475a;
+        }
+
+        /* 右侧：信息面板 */
+        .info-panel {
+            flex: 1;
+            padding: 30px;
+            background-color: #181825;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #111;
+        }
+
+        h1, h2, h3 { margin-top: 0; }
+        
+        .box {
+            background-color: var(--box-bg);
+            border: 2px solid #585b70;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            width: 80%;
+            max-width: 550px;
+            z-index: 10;
+        }
+
+        .box:hover {
+            transform: scale(1.02);
+            border-color: var(--highlight);
+            box-shadow: 0 0 15px rgba(137, 180, 250, 0.3);
+        }
+
+        .box-title { font-weight: bold; font-size: 1.0em; margin-bottom: 2px; }
+        .box-sub { font-size: 0.75em; opacity: 0.8; }
+        
+        /* 标签 Badge */
+        .badge {
+            display: inline-block;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 0.65em;
+            margin: 1px;
+            font-weight: bold;
+            color: #111;
+        }
+        .b-cpp { background-color: var(--cpp-color); }
+        .b-ros { background-color: var(--ros-color); }
+        .b-linux { background-color: var(--linux-color); }
+        
+        .b-vis { background-color: var(--hw-vision); }
+        .b-imu { background-color: var(--hw-imu); }
+        .b-mcu { background-color: var(--hw-mcu); }
+        .b-drv { background-color: var(--hw-motor); }
+
+        /* 连接线 */
+        .connector {
+            width: 4px;
+            background-color: #585b70;
+            height: 20px;
+            position: relative;
+        }
+
+        /* 布局特定样式 */
+        .row { display: flex; gap: 10px; width: 100%; justify-content: center; align-items: stretch;}
+        
+        /* 通信层特殊样式 */
+        .comm-layer {
+            display: flex;
+            gap: 15px;
+            width: 90%;
+            justify-content: center;
+            margin: 10px 0;
+            background: rgba(0,0,0,0.1);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px dashed #6c7086;
+        }
+        .comm-box {
+            flex: 1;
+            background: #313244;
+            border: 2px solid #585b70;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 0.85em;
+            cursor: pointer;
+            text-align: center;
+            min-width: 80px;
+        }
+        .comm-box:hover { transform: translateY(-3px); }
+        
+        /* 硬件盒子 */
+        .hw-box { width: 110px; font-size: 0.85em; padding: 8px 4px; }
+
+        /* 硬件列表样式 */
+        .hw-list {
+            text-align: left;
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            border-left: 4px solid #fff;
+            margin-bottom: 15px;
+        }
+        .hw-list h4 { margin: 0 0 8px 0; font-size: 1.0em; }
+        .hw-list ul { margin: 0; padding-left: 20px; }
+        .hw-list li { margin-bottom: 6px; }
+        .brand { color: var(--highlight); font-weight: bold; }
+
+        /* 动画小球 */
+        .data-dot {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background-color: #ff0000;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 0 15px #ff0000;
+            transform: translate(-50%, -50%);
+        }
+
+        /* 详情展示区 */
+        #detail-title { color: var(--highlight); border-bottom: 1px solid #45475a; padding-bottom: 10px; }
+        #detail-content { line-height: 1.6; color: #a6adc8; }
+
+        .btn {
+            background-color: var(--highlight);
+            color: #1e1e2e;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn:hover { background-color: #b4befe; }
+        
+        .move-label {
+            position: absolute;
+            color: #fff;
+            font-size: 11px;
+            background: rgba(0,0,0,0.8);
+            padding: 3px 6px;
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 101;
+            white-space: nowrap;
+        }
+        
+        /* 重点概念高亮框 */
+        .concept-box {
+            background: rgba(137, 180, 250, 0.1);
+            border-left: 3px solid var(--highlight);
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        .concept-title { font-weight: bold; color: var(--highlight); margin-bottom: 5px; display:block;}
+
+    </style>
+</head>
+<body>
+
+    <div id="anim-layer" style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow: hidden;"></div>
+
+    <div class="diagram-container">
+        <div class="box" id="app-layer" onclick="showDetail('app')">
+            <div class="box-title">应用与算法层 (上位机大脑)</div>
+            <div class="box-sub">Jetson Orin / IPC / Raspberry Pi</div>
+            <div>
+                <span class="badge b-cpp">C++ SLAM</span>
+                <span class="badge b-ros">Nav2</span>
+            </div>
+        </div>
+
+        <div class="connector"></div>
+
+        <div class="box" id="middleware" onclick="showDetail('ros')">
+            <div class="box-title">中间件层 (ROS 2 / DDS)</div>
+            <div class="box-sub">数据分发与抽象</div>
+        </div>
+
+        <div class="connector"></div>
+
+        <div class="box" id="driver-layer" onclick="showDetail('driver')">
+            <div class="box-title">硬件驱动层 (User Drivers)</div>
+            <div class="box-sub">C++ 理解与扩散</div>
+        </div>
+
+        <div class="connector" style="height: 10px;"></div>
+        
+        <div class="box" id="kernel" onclick="showDetail('kernel')" style="opacity: 0.9; transform: scale(0.95); padding: 5px;">
+            <div class="box-title" style="font-size: 0.9em;">Linux Kernel (搬运工)</div>
+        </div>
+
+        <div style="font-size: 0.8em; color: #9399b2; margin-top: 5px;">▼ 通信协议总线 (Communication Bus) ▼</div>
+        <div class="comm-layer">
+            <div class="comm-box" id="comm-net" onclick="showDetail('comm-net')" style="border-color: var(--comm-net);">
+                <div class="box-title" style="color: var(--comm-net)">TCP/UDP</div>
+                <div style="font-size:0.7em">Transport</div>
+            </div>
+            <div class="comm-box" id="comm-can" onclick="showDetail('comm-can')" style="border-color: var(--comm-can);">
+                <div class="box-title" style="color: var(--comm-can)">CAN / Serial</div>
+                <div style="font-size:0.7em">Control Bus</div>
+            </div>
+            <div class="comm-box" id="comm-cat" onclick="showDetail('comm-cat')" style="border-color: var(--comm-cat);">
+                <div class="box-title" style="color: var(--comm-cat)">EtherCAT</div>
+                <div style="font-size:0.7em">Real-time</div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="box hw-box" id="vision" onclick="showDetail('vision')" style="border-color: var(--hw-vision);">
+                <div class="box-title">视觉</div>
+                <div class="box-sub">LiDAR/Camera</div>
+                <div class="badge b-vis">Data++</div>
+            </div>
+
+            <div class="box hw-box" id="imu" onclick="showDetail('imu')" style="border-color: var(--hw-imu);">
+                <div class="box-title">IMU</div>
+                <div class="box-sub">Inertial</div>
+                <div class="badge b-imu">Serial</div>
+            </div>
+            
+            <div class="box hw-box" id="mcu" onclick="showDetail('mcu')" style="border-color: var(--hw-mcu);">
+                <div class="box-title">MCU</div>
+                <div class="box-sub">STM32</div>
+                <span class="badge b-mcu">RTOS/Bare</span>
+            </div>
+
+            <div class="box hw-box" id="motor-driver" onclick="showDetail('motor-driver')" style="border-color: var(--hw-motor);">
+                <div class="box-title">电机驱动</div>
+                <div class="box-sub">Servo</div>
+                <span class="badge b-drv">EtherCAT</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="info-panel">
+        <h2 id="detail-title">点击模块查看深度原理解析</h2>
+        <div id="detail-content">
+            <p>这是一个完整的现代机器人技术栈。</p>
+            <p>请重点点击 <b>“硬件驱动层”</b> 和 <b>“中间件层”</b>，查看关于“数据搬运 vs 理解”以及“DDS 原理”的详细说明。</p>
+        </div>
+        
+        <div style="margin-top: auto;">
+            <h3>模拟通信流</h3>
+            <button class="btn" style="border-left: 5px solid var(--hw-vision)" onclick="simulateDataFlow('vision')">视觉 (走 TCP/UDP)</button>
+            <button class="btn" style="border-left: 5px solid var(--hw-mcu)" onclick="simulateDataFlow('mcu')">MCU (走 CAN/Serial)</button>
+            <button class="btn" style="border-left: 5px solid var(--hw-motor)" onclick="simulateDataFlow('motor')">伺服电机 (走 EtherCAT)</button>
+        </div>
+    </div>
+
+    <script>
+        // 辅助函数：生成硬件列表
+        function genHWList(title, items, color) {
+            let listHtml = items.map(item => `<li><span class="brand">${item.brand}:</span> ${item.models}</li>`).join('');
+            return `
+                <div class="hw-list" style="border-left-color: ${color || '#fff'}">
+                    <h4 style="color: ${color || '#fff'}">${title}</h4>
+                    <ul>${listHtml}</ul>
+                </div>
+            `;
+        }
+
+        const details = {
+            'app': {
+                title: '应用与算法层 (Host)',
+                content: `
+                    <p><b>硬件载体：</b>
+					<br>• <b>NVIDIA Jetson:</b> AI 推理首选。
+                    <br>• <b>Raspberry Pi:</b> 学习入门首选。
+                    <br>• <b>IPC (x86):</b> 工业计算首选。</p>
+                    <p>当数据到达这里时，已经不是“0101”的二进制流，而是结构化的对象（如“前方3米有障碍物”）。</p>
+                `
+            },
+            
+            // 重点修改：中间件 DDS
+            'ros': { 
+                title: '中间件层 (ROS 2 / DDS)', 
+                content: `
+                    <div class="concept-box">
+                        <span class="concept-title">DDS 的核心作用</span>
+                        DDS (数据分发服务) 是 ROS 2 的灵魂。它解决了<b>“不用互相知道 IP 也能聊天”</b>的问题（Discovery 发现机制）。
+                    </div>
+                    <p><b>DDS 与底层协议的关系：</b></p>
+                    <ul>
+                        <li><b>TCP/UDP 是“路”：</b> 负责把数据包从 IP A 发送到 IP B。</li>
+                        <li><b>DDS 是“物流公司”：</b> 它运行在 TCP/UDP (通常是 UDP) 之上。它利用 UDP 的组播(Multicast)功能来发现网络里的其他节点，并管理数据的发送质量 (QoS)。</li>
+                        <li><b>CAN/串口：</b> 这些太底层，跑不了标准 DDS。所以需要驱动层先把它们的数据读出来，转换成 DDS 消息，再进入 ROS 网络。</li>
+                    </ul>
+                ` 
+            },
+            
+            // 重点修改：驱动层
+            'driver': { 
+                title: '硬件驱动层 (User/ROS Drivers)', 
+                content: `
+                    <div class="concept-box">
+                        <span class="concept-title">核心职责：理解与扩散</span>
+                        这里是 C++ 代码的主战场。
+                    </div>
+                    <ul>
+                        <li><b>理解数据 (Interpret):</b> 从内核拿到的只是一堆十六进制字节 (0xA5 0x5A...)。驱动层根据协议手册，将其“翻译”成物理意义（如：距离=1.5米，电压=24V）。</li>
+                        <li><b>扩散数据 (Distribute):</b> 将翻译好的数据封装成标准的 ROS 消息 (如 <code>sensor_msgs/LaserScan</code>)，通过 DDS 广播给整个系统。</li>
+                    </ul>
+                ` 
+            },
+            
+            // 重点修改：内核层
+            'kernel': { 
+                title: 'Linux Kernel (内核态)', 
+                content: `
+                    <div class="concept-box">
+                        <span class="concept-title">核心职责：搬运 (Transport)</span>
+                        内核驱动 (Kernel Module) 是“没有感情的搬运工”。
+                    </div>
+                    <p>它负责操作 USB 控制器、网卡或 CAN 卡的寄存器，把电信号变成内存里的字节流。<b>它不知道这些字节代表什么</b>（是雷达数据还是小猫图片，对内核来说都一样）。</p>
+                ` 
+            },
+            
+            // 通信层详情
+            'comm-net': {
+                title: 'TCP / UDP (Ethernet)',
+                content: `
+                    <p><b>角色：</b>高速公路。</p>
+                    <p><b>特点：</b>带宽大。通常承载 DDS 流量（运行在 UDP 上）。</p>
+                    <p><b>适用：</b>LiDAR, 深度相机。</p>
+                `
+            },
+            'comm-can': {
+                title: 'CAN / Serial',
+                content: `
+                    <p><b>角色：</b>乡间小道。</p>
+                    <p><b>特点：</b>可靠但带宽窄。DDS 无法直接跑在上面（虽然有 Micro-ROS，但主流方案依然是上位机通过驱动转接）。</p>
+                `
+            },
+            'comm-cat': {
+                title: 'EtherCAT',
+                content: `
+                    <p><b>角色：</b>专用赛道。</p>
+                    <p><b>特点：</b>极低延迟。通常绕过标准 TCP/UDP 协议栈，直接使用以太网帧传输。</p>
+                `
+            },
+
+            // 硬件详情 (保持简洁)
+            'vision': { title: '视觉系统', content: `<p>数据量大，通过 USB 3.0 或千兆网口 (UDP) 传输。</p>` },
+            'imu': { title: 'IMU', content: `<p>数据量小，通过串口 (Serial/TTL) 传输。</p>` },
+            'mcu': {
+                title: '下位机 (MCU)',
+                content: `
+                    <p><b>运行环境：</b>裸机 (Bare Metal) 或 FreeRTOS。</p>
+                    <p>负责把来自 ROS 的速度指令 (Twist) 拆解成电机 PWM 信号。</p>
+                `
+            },
+            'motor-driver': { title: '电机驱动', content: `<p>功率放大层。</p>` }
+        };
+
+        function showDetail(key) {
+            const data = details[key];
+            if (data) {
+                document.getElementById('detail-title').innerText = data.title;
+                document.getElementById('detail-content').innerHTML = data.content;
+            }
+            document.querySelectorAll('.box, .comm-box').forEach(b => b.style.borderColor = '#585b70');
+            
+            let targetId = key;
+            if (key === 'ros') targetId = 'middleware';
+            if (key === 'driver') targetId = 'driver-layer';
+            if (key === 'app') targetId = 'app-layer';
+            
+            const el = document.getElementById(targetId);
+            if(el) {
+                if (key.includes('vision')) el.style.borderColor = '#cba6f7';
+                else if (key.includes('imu')) el.style.borderColor = '#fab387';
+                else if (key.includes('mcu')) el.style.borderColor = '#a6e3a1';
+                else if (key.includes('motor')) el.style.borderColor = '#eba0ac';
+                else if (key === 'comm-net') el.style.borderColor = '#74c7ec';
+                else if (key === 'comm-can') el.style.borderColor = '#f9e2af';
+                else if (key === 'comm-cat') el.style.borderColor = '#f38ba8';
+                else el.style.borderColor = '#89b4fa';
+            }
+        }
+
+        function simulateDataFlow(sourceType) {
+            const layer = document.getElementById('anim-layer');
+            const getPos = (id) => {
+                const el = document.getElementById(id);
+                if(!el) return {x:0, y:0};
+                const rect = el.getBoundingClientRect();
+                return { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+            };
+
+            let startId, protocolId, color, textProt;
+
+            if (sourceType === 'vision') {
+                startId = 'vision';
+                protocolId = 'comm-net';
+                color = '#cba6f7';
+                textProt = "UDP/USB";
+            } else if (sourceType === 'mcu') {
+                startId = 'mcu';
+                protocolId = 'comm-can';
+                color = '#a6e3a1';
+                textProt = "CAN Bus";
+            } else {
+                startId = 'motor-driver';
+                protocolId = 'comm-cat';
+                color = '#eba0ac';
+                textProt = "EtherCAT";
+            }
+
+            const startPos = getPos(startId);
+            const protocolPos = getPos(protocolId);
+            const kernel = getPos('kernel');
+            const driver = getPos('driver-layer');
+            const ros = getPos('middleware');
+            const app = getPos('app-layer');
+
+            const dot = document.createElement('div');
+            dot.className = 'data-dot';
+            dot.style.display = 'block';
+            dot.style.left = startPos.x + 'px';
+            dot.style.top = startPos.y + 'px';
+            dot.style.backgroundColor = color;
+            dot.style.boxShadow = `0 0 15px ${color}`;
+            layer.appendChild(dot);
+
+            const speed = 500;
+
+            const steps = [
+                { pos: protocolPos, text: `${textProt} 传输` },
+                { pos: kernel, text: "内核: 搬运字节 (Transport)" },
+                { pos: driver, text: "驱动: 理解数据 (Interpret)" },
+                { pos: ros, text: "DDS: 分发数据 (Distribute)" },
+                { pos: app, text: "App: 业务逻辑" }
+            ];
+
+            let i = 0;
+            function move() {
+                if (i >= steps.length) {
+                    dot.remove();
+                    return;
+                }
+                const step = steps[i];
+                dot.style.transition = `all ${speed}ms ease-in-out`;
+                dot.style.left = step.pos.x + 'px';
+                dot.style.top = step.pos.y + 'px';
+                
+                const label = document.createElement('div');
+                label.className = 'move-label';
+                label.innerText = step.text;
+                label.style.left = (step.pos.x + 20) + 'px';
+                label.style.top = (step.pos.y - 15) + 'px';
+                layer.appendChild(label);
+                setTimeout(() => label.remove(), speed);
+
+                i++;
+                setTimeout(move, speed);
+            }
+            setTimeout(move, 100);
+        }
+    </script>
+</body>
+</html>
