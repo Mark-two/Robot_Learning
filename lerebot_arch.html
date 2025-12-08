@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人全栈架构 (绝对安全版)</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#ffffff',
+                lineColor: '#000000',
+                mainBkg: '#ffffff',
+                nodeBorder: '#000000'
+            },
+            flowchart: { htmlLabels: true }
+        });
+    </script>
+    <style>
+        body { 
+            background-color: #f0f0f0; /* 页面灰色，图表白色，形成对比 */
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 20px; 
+        }
+        h2 { color: #333; border-left: 5px solid #000; padding-left: 10px; margin-top: 30px; width: 90%; }
+        .diagram-container { 
+            background: #ffffff; 
+            padding: 20px; 
+            border: 2px solid #333; 
+            border-radius: 10px; 
+            width: 95%; 
+            margin-bottom: 30px; 
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.2); 
+        }
+    </style>
+</head>
+<body>
+
+    <h2>1. 硬件物理接线图 (Hardware)</h2>
+    <div class="diagram-container">
+        <div class="mermaid">
+            flowchart LR
+                %% 节点定义
+                PC["💻 电脑 PC\n(训练/SSH)"]
+                
+                subgraph Brain [核心大脑]
+                    Jetson["🧠 Jetson Orin Nano"]
+                end
+
+                subgraph Hub [通讯中心]
+                    USB_HUB["USB 集线器"]
+                    STM32["📡 STM32 单片机"]
+                    USBCAN["🔌 USB-CAN 模块"]
+                end
+
+                subgraph Actuators [执行器]
+                    Arm["🦾 机械臂 (LeRobot)"]
+                    Motor["⚙️ M2006 电机"]
+                    Base["🚗 移动底盘"]
+                    Cam["👁️ 深度相机"]
+                end
+
+                %% 样式定义
+                style PC fill:#e1bee7,stroke:#333,stroke-width:2px,color:#000
+                style Jetson fill:#c8e6c9,stroke:#333,stroke-width:2px,color:#000
+                style USB_HUB fill:#ffcc80,stroke:#333,stroke-width:2px,color:#000
+                style USBCAN fill:#ffcc80,stroke:#333,stroke-width:2px,color:#000
+                style STM32 fill:#ffcc80,stroke:#333,stroke-width:2px,color:#000
+                style Arm fill:#b3e5fc,stroke:#333,stroke-width:2px,color:#000
+                style Motor fill:#b3e5fc,stroke:#333,stroke-width:2px,color:#000
+                style Base fill:#b3e5fc,stroke:#333,stroke-width:2px,color:#000
+                style Cam fill:#b3e5fc,stroke:#333,stroke-width:2px,color:#000
+
+                %% 连线关系
+                PC -.- Jetson
+                Jetson ==> USB_HUB
+                Jetson ==> Cam
+                
+                USB_HUB --> STM32
+                USB_HUB --> USBCAN
+                USB_HUB --> Arm
+                
+                USBCAN ==> Motor
+                STM32 --> Base
+        </div>
+    </div>
+
+    <h2>2. 软件学习三部曲 (Software Roadmap)</h2>
+    <div class="diagram-container">
+        <div class="mermaid">
+            flowchart TD
+                %% 节点定义
+                Step1["1. 现有资源体验\n(Python/LeRobot)\n目标: 跑通环境，确保硬件正常"]
+                Step2["2. 底层重构\n(C++ 裸机驱动)\n目标: 拔掉官方代码，手写串口协议"]
+                Step3["3. 架构集成\n(ROS2 Control)\n目标: 封装成插件，接入 MoveIt"]
+                Hardware["🦾 真实机械臂硬件"]
+
+                %% 样式定义
+                style Step1 fill:#bbdefb,stroke:#0d47a1,stroke-width:2px,color:#000
+                style Step2 fill:#ffcdd2,stroke:#b71c1c,stroke-width:2px,color:#000
+                style Step3 fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px,color:#000
+                style Hardware fill:#eeeeee,stroke:#999,stroke-dasharray: 5 5,color:#000
+
+                %% 连线关系
+                Step1 -- "弃用官方代码" --> Step2
+                Step2 -- "封装成库" --> Step3
+                
+                Step1 -.-> Hardware
+                Step2 -.-> Hardware
+                Step3 -.-> Hardware
+        </div>
+    </div>
+
+</body>
+</html>
